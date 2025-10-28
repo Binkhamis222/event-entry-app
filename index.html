@@ -9,9 +9,7 @@
     <!-- Use Inter font -->
     <style>
         /* Ensuring Inter is the base font */
-        body { font-family: 'Inter', sans-serif; }
-        /* Ensuring the body itself is set to RTL for overall layout fallback */
-        body { direction: rtl; }
+        body { font-family: 'Inter', sans-serif; direction: rtl; }
     </style>
     <!-- Load Firebase Realtime Database Modules -->
     <script type="module">
@@ -64,7 +62,6 @@
         // Function to initialize Firebase, get the session ID, and update UI
         function initializeAppAndSession() {
             const header = document.getElementById('app-header');
-            // Removed: const sessionDisplay = document.getElementById('session-display');
 
             // 1. Get the session ID from the URL query parameter
             const urlParams = new URLSearchParams(window.location.search);
@@ -72,10 +69,9 @@
 
             if (!sessionID) {
                 sessionID = 'unspecified_session_entries';
-                // Keeping the warning message for administration/debugging purposes
-                showMessage("تنبيه: مُعرّف الجلسة غير موجود في الرابط. يتم استخدام الافتراضي: " + sessionID, 'warning');
+                // تم التعليق على هذا السطر لإخفاء التنبيه من واجهة المستخدم
+                // showMessage("تنبيه: مُعرّف الجلسة غير موجود في الرابط. يتم استخدام الافتراضي: " + sessionID, 'warning');
             } 
-            // Removed the block that displays sessionID to the user.
             
             // 2. Initialize Firebase App
             try {
@@ -83,39 +79,54 @@
                 db = getDatabase(app);
                 
                 // Initialization SUCCESS: Change header to green and show ready message
-                header.classList.remove('text-indigo-700');
-                header.classList.add('text-green-700');
-                showMessage("التطبيق جاهز لتسجيل الدخول.", 'success');
+                header.classList.remove('text-white'); 
+                header.classList.add('text-green-400'); // Light green for success on dark background
 
             } catch (error) {
                 console.error("Firebase Initialization Error:", error);
                 
                 // Initialization FAILURE: Change header to red
-                header.classList.remove('text-indigo-700');
-                header.classList.add('text-red-700');
-                showMessage("فشل التهيئة: تحقق من إعدادات Firebase والوحدة للمزيد من التفاصيل.", 'error');
+                header.classList.remove('text-white');
+                header.classList.add('text-red-400');
+                // The main error message is suppressed from the user for cleaner UI
             }
         }
         
         // --- SUBMIT LOGIC ---
         // Expose submitEntry to the global scope so onclick can find it
         window.submitEntry = function() {
-            if (!db) {
-                showMessage("فشل الإرسال: التطبيق لم يتم تهيئته.", 'error');
-                return;
-            }
-
+            const submitButton = document.getElementById('submit-button');
             const nameInput = document.getElementById('name-input');
             const guestName = nameInput.value.trim();
 
-            if (guestName === "") {
-                showMessage("الرجاء إدخال اسمك قبل الإرسال.", 'warning');
+            // 1. Check if the button is already disabled (i.e., submission in progress)
+            if (submitButton.disabled) {
+                return; // Ignore the click if a submission is already active
+            }
+
+            if (!db) {
+                // Keep logging to console for developer review
+                console.error("Submission Failed: Database not initialized.");
                 return;
             }
 
+            if (guestName === "") {
+                showMessage("الرجاء إدخال الاسم الثنائي قبل الإرسال.", 'warning');
+                return;
+            }
+
+            // Store original text for restoration
+            const originalButtonText = "ارسال | send"; // <-- تم التحديث هنا
+            
+            // 2. Disable the button and show loading state
+            submitButton.disabled = true;
+            submitButton.textContent = "جاري الإرسال...";
+            submitButton.classList.remove('hover:bg-[#008083]');
+            submitButton.classList.add('opacity-75', 'cursor-not-allowed', 'bg-[#33a8aa]');
+
+
             const newEntry = {
                 guestName: guestName,
-                // Log the session ID the entry was submitted under
                 entrySession: sessionID,
                 timestamp: new Date().toISOString()
             };
@@ -125,29 +136,31 @@
             // Use the hardcoded full path for the general log
             const logRef = ref(db, FULL_LOG_PATH);
 
-            // Attempt to push to BOTH the session-specific node and the general log node
+            // Use Promise.all to ensure both entries are attempted
             Promise.all([
                 push(sessionRef, newEntry),
                 push(logRef, newEntry)
             ])
             .then(() => {
-                // Submission successful:
-                // 1. Hide the main check-in card
+                showMessage("تسجيل دخول ناجح! مرحباً، " + guestName + ".", 'success');
+                nameInput.value = ''; // Clear the input field
+                
+                // Hide the main check-in card
                 document.getElementById('main-checkin-card').classList.add('hidden');
                 
-                // 2. Update and show the Thank You card
-                document.getElementById('thank-you-name').textContent = guestName;
+                // Show the Thank You card
                 document.getElementById('thank-you-card').classList.remove('hidden');
-                
-                nameInput.value = ''; // Clear the input field for next use if the user refreshes
             })
             .catch((error) => {
-                console.error("Data submission error:", error);
-                // Inform the user about the failure
-                showMessage("فشل الإرسال: خطأ في الشبكة أو القواعد. (من المحتمل أن يكون CSP قد حظر Realtime DB)", 'error');
-                // Re-show the main card if it was hidden
-                document.getElementById('main-checkin-card').classList.remove('hidden');
-                document.getElementById('thank-you-card').classList.add('hidden');
+                console.error("Data submission error (Firebase/CSP):", error);
+                // We suppress the user-facing error message as requested, but we re-enable the button.
+            })
+            .finally(() => {
+                // 3. Re-enable the button regardless of success or failure
+                submitButton.disabled = false;
+                submitButton.textContent = originalButtonText;
+                submitButton.classList.remove('opacity-75', 'cursor-not-allowed', 'bg-[#33a8aa]');
+                submitButton.classList.add('hover:bg-[#008083]');
             });
         };
         // --- END SUBMIT LOGIC ---
@@ -156,67 +169,72 @@
         window.onload = initializeAppAndSession;
     </script>
 </head>
-<!-- MODIFIED: Changed 'p-0' to 'py-0 px-2 sm:px-4' to remove vertical padding but keep horizontal padding -->
 <body class="bg-gray-50 flex items-center justify-center min-h-screen py-0 px-2 sm:px-4">
 
-    <!-- Outer container to control max width -->
-    <div class="w-full max-w-md">
+    <!-- 1. MAIN CHECK-IN CARD (Visible by default) -->
+    <div id="main-checkin-card" 
+        class="w-full max-w-md p-6 md:p-8 shadow-2xl rounded-xl border border-gray-700
+               bg-gray-800 bg-cover bg-center bg-no-repeat bg-[url('https://binkhamis222.github.io/event-entry-app/555.png')]
+               backdrop-filter backdrop-blur-sm bg-opacity-90 
+               py-40"> 
+        
+        <!-- Header -->
+        <h1 id="app-header" class="text-4xl font-extrabold text-center text-white mb-8 transition-colors duration-300">
+            تسجيل الدخول للفعالية
+        </h1>
+        
+        <!-- Message Box -->
+        <div id="message-box" class="mb-6 opacity-0 transition-opacity duration-300"></div>
 
-        <!-- 1. MAIN CHECK-IN CARD (Visible by default) -->
-        <!-- UPDATED: Increased vertical padding from py-32 to py-40 -->
-        <div id="main-checkin-card" class="bg-cover bg-center bg-no-repeat bg-[url('https://binkhamis222.github.io/event-entry-app/555.png')] py-40 px-6 sm:p-8 shadow-2xl rounded-xl border border-gray-200">
-
-            <!-- Header -->
-            <h1 id="app-header" class="text-3xl font-extrabold text-center text-indigo-800 mb-8 transition-colors duration-300">
-                تسجيل الدخول للفعالية
-            </h1>
-            
-            <!-- Message Box -->
-            <div id="message-box" class="mb-6 opacity-0 transition-opacity duration-300"></div>
-
-            <!-- Input Form -->
-            <div class="space-y-6">
-                <div>
-                    <!-- Label with text-right -->
-                    <label for="name-input" class="block text-lg font-medium text-gray-700 mb-2 text-right">
-                        أدخل اسمك
-                    </label>
-                    <!-- Input with text-right -->
-                    <input 
-                        type="text" 
-                        id="name-input" 
-                        placeholder="الاسم الكامل"
-                        class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-lg transition duration-150 text-right"
-                        onkeydown="if(event.key === 'Enter') submitEntry()"
-                    >
-                </div>
-                <!-- Submit Button -->
-                <button 
-                    id="submit-button"
-                    onclick="submitEntry()"
-                    class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-md text-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200 ease-in-out transform hover:scale-[1.01]"
+        <!-- Input Form -->
+        <div class="space-y-6">
+            <div>
+                <!-- Label for Tow-part-Name -->
+                <label for="name-input" class="block text-lg font-medium text-white mb-2 flex justify-between items-center text-right">
+                    <span>الاسم الثنائي</span>
+                    <!-- Tow-part-Name now white -->
+                    <span class="text-lg font-medium text-white">Tow-part-Name</span>
+                </label>
+                <input 
+                    type="text" 
+                    id="name-input" 
+                    placeholder="اسم الاسم ..."
+                    class="mt-1 block w-full px-5 py-3 border border-gray-300 rounded-full shadow-lg 
+                           focus:ring-blue-500 focus:border-blue-500 text-lg transition duration-150 text-right text-gray-800"
+                    onkeydown="if(event.key === 'Enter') submitEntry()"
                 >
-                    إرسال وتسجيل الدخول
-                </button>
             </div>
+            
+            <!-- Submit Button -->
+            <button
+                id="submit-button"
+                onclick="submitEntry()"
+                class="w-full flex justify-center py-4 px-4 border border-transparent rounded-full shadow-lg text-lg font-bold text-white 
+                       bg-[#00979a] hover:bg-[#008083] focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-[#00979a] 
+                       transition duration-200 ease-in-out transform hover:scale-[1.01]"
+            >
+                ارسال | send <!-- <-- تم التحديث هنا -->
+            </button>
         </div>
 
-        <!-- 2. THANK YOU CARD (Hidden by default) -->
-        <!-- UPDATED: Increased vertical padding from py-48 to py-56 -->
-        <div id="thank-you-card" class="hidden mt-8 bg-cover bg-center bg-no-repeat bg-[url('https://binkhamis222.github.io/event-entry-app/555.png')] py-56 px-12 md:p-20 shadow-2xl rounded-xl border border-gray-200 text-center">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 mx-auto mb-6 text-green-500">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-            </svg>
-            <h2 class="text-4xl font-extrabold text-green-700 mb-2">
-                شكراً لك!
-            </h2>
-            <p class="text-xl text-gray-700 mb-4">
-                <span id="thank-you-name" class="font-bold text-indigo-600">الضيف</span>، تم تسجيل دخولك بنجاح.
-            </p>
-            <p class="text-gray-500">
-                استمتع بوقتك في الفعالية.
-            </p>
-        </div>
+    </div>
+
+    <!-- 2. THANK YOU CARD (Hidden by default) -->
+    <div id="thank-you-card" 
+        class="hidden w-full max-w-md p-12 md:p-16 shadow-2xl rounded-xl border border-gray-700 text-center
+               bg-gray-800 bg-cover bg-center bg-no-repeat bg-[url('https://binkhamis222.github.io/event-entry-app/555.png')]
+               backdrop-filter backdrop-blur-sm bg-opacity-90 
+               py-56">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-20 h-20 mx-auto mb-6 text-green-400">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+        </svg>
+        <h2 class="text-5xl font-extrabold text-white mb-4">
+            شكراً لك!
+        </h2>
+        <p class="text-lg text-gray-300">
+            تم تسجيل دخولك بنجاح. نتمنى لك فعالية ممتعة.
+        </p>
     </div>
 </body>
 </html>

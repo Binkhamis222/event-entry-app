@@ -1,22 +1,22 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Event Entry App</title>
+    <title>تطبيق تسجيل الدخول للفعالية</title>
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Use Inter font -->
     <style>
         body { font-family: 'Inter', sans-serif; }
     </style>
-    <!-- Load Firebase Realtime Database and Auth -->
+    <!-- Load Firebase Realtime Database Modules -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+        import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
         
         // --- FIREBASE CONFIGURATION ---
-        // These are your specific project keys for 'newstartigy'
+        // NOTE: These credentials are hardcoded for demonstration purposes in this environment.
         const FIREBASE_CONFIG = {
             apiKey: "AIzaSyB1wqr1Rh8f6O_dLEKO0LQAZdXCXvPVbBE", 
             authDomain: "newstartigy.firebaseapp.com",
@@ -26,44 +26,21 @@
             messagingSenderId: "578357284831",
             appId: "1:578357284831:web:7ab9395f24c44f89f4be6a"
         };
-        // -------------------------------------------------------------
+        // ------------------------------
+
+        // HARDCODED PATHS: Fixed path for all submissions to ensure they are collected.
+        const LOG_ROOT = 'GENERAL_ENTRIES_LOG';
+        const SUBMISSIONS_NODE = 'submissions';
+        const FULL_LOG_PATH = LOG_ROOT + '/' + SUBMISSIONS_NODE;
 
         // Global variables for Firebase services
         let db = null;
-        let sessionID = null;
-
-        // Function to initialize Firebase and get the session ID from the URL
-        function initializeAppAndSession() {
-            try {
-                // Initialize Firebase App
-                const app = initializeApp(FIREBASE_CONFIG);
-                db = getDatabase(app);
-                
-                // 1. Get the session ID from the URL query parameter
-                const urlParams = new URLSearchParams(window.location.search);
-                sessionID = urlParams.get('session');
-
-                if (!sessionID) {
-                    // Fallback or display a message if session ID is missing
-                    sessionID = 'unspecified_session_entries';
-                    showMessage("Notice: Session ID missing in URL. Using default: " + sessionID, 'warning');
-                } else {
-                    document.getElementById('session-display').textContent = sessionID;
-                }
-                
-                showMessage("App is ready. Session: " + sessionID, 'success');
-                
-            } catch (error) {
-                console.error("Firebase Initialization Error:", error);
-                showMessage("Initialization Failed: Check Firebase config and console for details.", 'error');
-            }
-        }
 
         // Function to display messages (replaces alert())
         function showMessage(message, type = 'info') {
             const messageBox = document.getElementById('message-box');
             messageBox.textContent = message;
-            messageBox.className = "p-3 rounded-lg text-sm transition-opacity duration-300";
+            messageBox.className = "p-3 rounded-lg text-sm transition-opacity duration-300 text-right"; // Added text-right for RTL
             
             if (type === 'success') {
                 messageBox.classList.add('bg-green-100', 'text-green-800');
@@ -85,10 +62,34 @@
             }
         }
 
+        // Function to handle initialization
+        function handleInitialization() {
+            const header = document.getElementById('app-header');
+            
+            try {
+                // Initialize Firebase App
+                const app = initializeApp(FIREBASE_CONFIG);
+                db = getDatabase(app);
+                
+                // Initialization SUCCESS: Change header to green
+                header.classList.remove('text-indigo-700');
+                header.classList.add('text-green-700');
+                
+            } catch (error) {
+                console.error("Firebase Initialization Error:", error);
+                
+                // Initialization FAILURE: Change header to red
+                header.classList.remove('text-indigo-700');
+                header.classList.add('text-red-700');
+                showMessage("فشل التهيئة: تحقق من إعدادات Firebase والوحدة للمزيد من التفاصيل.", 'error');
+            }
+        }
+        
         // --- SUBMIT LOGIC ---
+        // Expose submitEntry to the global scope so onclick can find it
         window.submitEntry = function() {
-            if (!db || !sessionID) {
-                showMessage("Submission Failed: App not initialized.", 'error');
+            if (!db) {
+                showMessage("فشل الإرسال: التطبيق لم يتم تهيئته.", 'error');
                 return;
             }
 
@@ -96,7 +97,7 @@
             const guestName = nameInput.value.trim();
 
             if (guestName === "") {
-                showMessage("Please enter your name before submitting.", 'warning');
+                showMessage("الرجاء إدخال اسمك قبل الإرسال.", 'warning');
                 return;
             }
 
@@ -105,37 +106,44 @@
                 timestamp: new Date().toISOString()
             };
 
-            // *** CRITICAL FIX: Use push() to create a unique child node ***
-            const sessionRef = ref(db, sessionID);
+            // Use the hardcoded full path for the log
+            const logRef = ref(db, FULL_LOG_PATH);
             
-            push(sessionRef, newEntry)
+            // push() creates a new, unique entry every time
+            push(logRef, newEntry)
                 .then(() => {
-                    showMessage("Submission successful! Welcome, " + guestName + ".", 'success');
-                    nameInput.value = ''; // Clear the input field
+                    // Submission successful:
+                    
+                    // 1. Hide the main check-in card
+                    document.getElementById('main-checkin-card').classList.add('hidden');
+                    
+                    // 2. Show the Thank You card
+                    document.getElementById('thank-you-card').classList.remove('hidden');
+                    
+                    nameInput.value = ''; // Clear the input field for next use if the user refreshes
                 })
                 .catch((error) => {
                     console.error("Data submission error:", error);
-                    showMessage("Submission failed: Check console for network or rule errors.", 'error');
+                    // This is the expected error due to CSP in this environment
+                    showMessage("فشل الإرسال: خطأ في الشبكة أو القواعد. **(من المحتمل أن يكون CSP قد حظر Realtime DB)**", 'error');
                 });
         };
         // --- END SUBMIT LOGIC ---
 
-        // Initialize on window load
-        window.onload = initializeAppAndSession;
+        // Assign the initialization function to window.onload
+        window.onload = handleInitialization;
     </script>
 </head>
 <body class="bg-gray-50 flex items-center justify-center min-h-screen p-4">
 
-    <div class="w-full max-w-md bg-white p-6 md:p-8 shadow-2xl rounded-xl border border-gray-200">
+    <!-- 1. MAIN CHECK-IN CARD (Visible by default) -->
+    <div id="main-checkin-card" class="w-full max-w-md bg-white p-6 md:p-8 shadow-2xl rounded-xl border border-gray-200">
         
-        <!-- Header -->
-        <h1 class="text-3xl font-extrabold text-center text-indigo-700 mb-2">
-            Event Check-In
+        <!-- Header - ID added for dynamic color change -->
+        <h1 id="app-header" class="text-3xl font-extrabold text-center text-indigo-700 mb-8 transition-colors duration-300">
+            تسجيل الدخول للفعالية
         </h1>
-        <p class="text-center text-sm text-gray-500 mb-6">
-            Session: <span id="session-display" class="font-semibold text-indigo-600">Loading...</span>
-        </p>
-
+        
         <!-- Message Box -->
         <div id="message-box" class="mb-6 opacity-0 transition-opacity duration-300"></div>
 
@@ -143,13 +151,13 @@
         <div class="space-y-6">
             <div>
                 <label for="name-input" class="block text-lg font-medium text-gray-700 mb-2">
-                    Enter Your Name
+                    أدخل اسمك
                 </label>
                 <input 
                     type="text" 
                     id="name-input" 
-                    placeholder="Full Name"
-                    class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-lg transition duration-150"
+                    placeholder="الاسم الكامل"
+                    class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-lg transition duration-150 text-right"
                     onkeydown="if(event.key === 'Enter') submitEntry()"
                 >
             </div>
@@ -159,13 +167,20 @@
                 onclick="submitEntry()"
                 class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-md text-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200 ease-in-out transform hover:scale-[1.01]"
             >
-                Submit Name & Enter
+                ارســـــــال
             </button>
         </div>
         
-        <p class="mt-8 text-xs text-center text-gray-400">
-            Powered by GitHub Pages & Firebase Realtime Database
-        </p>
+    </div>
+
+    <!-- 2. THANK YOU CARD (Hidden by default) -->
+    <div id="thank-you-card" class="hidden w-full max-w-md bg-white p-12 md:p-16 shadow-2xl rounded-xl border border-gray-200 text-center">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 mx-auto mb-6 text-green-500">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+        </svg>
+        <h2 class="text-4xl font-extrabold text-green-700 mb-2">
+            شكراً لك!
+        </h2>
     </div>
 </body>
 </html>

@@ -174,7 +174,7 @@
              bg-gray-800 bg-cover bg-center bg-no-repeat bg-[url('https://binkhamis222.github.io/event-entry-app/555.png')]"> 
     
     <!-- حاوية لتقييد عرض المحتوى وجعله يتوسط الشاشة -->
-    <div class="w-full max-w-md p-6 md:p-8 rounded-xl mt-[200px]"> <!-- تم تعديل الهامش العلوي من mt-[300px] إلى mt-[200px] -->
+    <div class="w-full max-w-md p-6 md:p-8 rounded-xl mt-[200px]"> <!-- الهامش العلوي الحالي لتوسيط العناصر -->
 
         <!-- 1. MAIN CHECK-IN CONTAINER (Visible by default) -->
         <div id="check-in-container">
@@ -188,7 +188,7 @@
 
             <!-- Input Form -->
             <div class="space-y-6"> 
-                <div>
+                <div class="mb-24"> <!-- تم إضافة mb-24 هنا لتحريك الزر إلى الأسفل بمقدار 96 بكسل إضافية -->
                     <!-- Label for Tow-part-Name -->
                     <label for="name-input" class="block text-lg font-medium text-white mb-2 flex justify-between items-center text-right">
                         <span>الاسم الثنائي</span>

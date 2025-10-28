@@ -3,15 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تطبيق تسجيل الدخول للفعالية - Firestore</title>
+    <title>تطبيق تسجيل الدخول للفعالية</title>
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Use Inter font -->
+    
     <style>
-        /* تعيين خط "Inter" للخلفية */
+        /* تعيين خط "Inter" الافتراضي */
         body { font-family: 'Inter', sans-serif; }
-        /* التأكد من أن البطاقات لديها ترتيب عمق (z-index) أعلى من التظليل */
-        #main-checkin-card, #thank-you-card { z-index: 20; }
+        /* التنسيق الأساسي للجسم للتوسيط */
+        body {
+            background-color: #f9fafb; /* خلفية رمادية فاتحة للجسم */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        
+        /* التعديل: تطبيق خلفية الصورة على البطاقة الرئيسية بالكامل */
+        #main-checkin-card {
+            padding: 0;
+            overflow: hidden;
+            position: relative; 
+            /* الارتفاع الأدنى: 1000px */
+            min-height: 1000px; 
+        }
+        
+        /* **تمت الإزالة:** إزالة طبقة التظليل السوداء (::before) لجعل البطاقة شفافة بالكامل */
+        /* **تمت الإزالة:** لا حاجة لتعيين z-index الآن */
     </style>
     
     <!-- Load Firebase Firestore and Auth Modules -->
@@ -25,7 +44,7 @@
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
 
-        // المسار العام لتخزين إدخالات الفعالية (يتم الوصول إليه من قبل جميع المستخدمين)
+        // المسار العام لتخزين إدخالات الفعالية (مسار Public مطلوب للمشاركة)
         const COLLECTION_PATH = `artifacts/${appId}/public/data/event_entries`;
 
         // Global services and user state
@@ -61,8 +80,6 @@
 
         // Function to handle initialization and authentication
         async function handleInitialization() {
-            const header = document.getElementById('app-header');
-            
             try {
                 // Initialize Firebase App and Services
                 const app = initializeApp(firebaseConfig);
@@ -77,21 +94,14 @@
                     await signInAnonymously(auth);
                 }
 
-                // Set user ID and update UI state
+                // Set user ID and update state
                 currentUserId = auth.currentUser?.uid || crypto.randomUUID();
                 isInitialized = true;
                 
-                // Initialization SUCCESS: Change header to green
-                header.classList.remove('text-indigo-700');
-                header.classList.add('text-green-700');
-                showMessage("تم الاتصال بالخادم بنجاح. يمكنك تسجيل الدخول.", 'info');
+                showMessage("تم الاتصال بالخادم (Firestore) بنجاح. يمكنك تسجيل الدخول.", 'info');
                 
             } catch (error) {
                 console.error("Firebase Initialization/Auth Error:", error);
-                
-                // Initialization FAILURE: Change header to red
-                header.classList.remove('text-indigo-700');
-                header.classList.add('text-red-700');
                 showMessage("فشل التهيئة: تحقق من إعدادات الاتصال.", 'error');
             }
         }
@@ -149,36 +159,42 @@
     </script>
 </head>
 
-<body class="min-h-screen p-4 bg-cover bg-center" style="background-image: url('https://binkhamis222.github.io/event-entry-app/555.png');">
+<body>
 
-    <!-- طبقة التظليل (Overlay) لجعل النص مقروءاً فوق صورة الخلفية. -->
-    <div class="absolute inset-0 bg-black opacity-40 z-10"></div>
-    
-    <!-- هذا الـ `div` يحيط بالبطاقات لضمان أنها فوق التظليل ومتمركزة في المنتصف. -->
-    <div class="relative flex items-center justify-center w-full min-h-screen z-20">
+    <!-- MAIN CHECK-IN CARD (Visible by default) -->
+    <div 
+        id="main-checkin-card" 
+        class="w-full max-w-xl shadow-2xl rounded-xl border border-gray-200 bg-cover bg-center bg-no-repeat"
+        style="background-image: url('https://binkhamis222.github.io/event-entry-app/555.png');"
+    >
+        
+        <!-- العنوان (الهامش العلوي 300px) -->
+        <h1 
+            id="app-header" 
+            class="text-3xl font-extrabold text-center text-white mt-[300px] mb-4 transition-colors duration-300"
+        >
+            تسجيل الدخول للفعالية
+        </h1>
 
-        <!-- 1. MAIN CHECK-IN CARD (Visible by default) -->
-        <div id="main-checkin-card" class="w-full max-w-md bg-white p-6 md:p-8 shadow-2xl rounded-xl border border-gray-200">
-                    
-                    <!-- Header - ID added for dynamic color change -->
-                    <h1 id="app-header" class="text-3xl font-extrabold text-center text-indigo-700 mb-8 transition-colors duration-300">
-                        تسجيل الدخول للفعالية
-                    </h1>
+        <!-- Card Body Content: الآن شفاف بالكامل، والنص أبيض -->
+        <div class="p-8 md:p-10 bg-transparent rounded-b-xl h-full flex flex-col justify-center">
                     
                     <!-- Message Box -->
+                    <!-- تم تعديل لون رسائل التحذير والخطأ لتظهر بوضوح فوق الخلفية الداكنة -->
                     <div id="message-box" class="mb-6 opacity-0 transition-opacity duration-300"></div>
 
-                    <!-- Input Form -->
-                    <div class="space-y-6">
+                    <!-- Input Form (تم إضافة هامش علوي سالب لرفعه للأعلى) -->
+                    <div class="space-y-8 -mt-[100px]">
                         <div>
-                            <label for="name-input" class="block text-lg font-medium text-gray-700 mb-2">
+                            <!-- جعل النص أبيض لضمان التباين -->
+                            <label for="name-input" class="block text-lg font-medium text-white mb-2">
                                 أدخل اسمك
                             </label>
                             <input 
                                 type="text" 
                                 id="name-input" 
                                 placeholder="الاسم الكامل"
-                                class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-lg transition duration-150 text-right"
+                                class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-lg transition duration-150 text-right text-gray-800"
                                 onkeydown="if(event.key === 'Enter') submitEntry()"
                             >
                         </div>
@@ -187,25 +203,23 @@
                         <button 
                             id="submit-button"
                             onclick="submitEntry()"
-                            class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-md text-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200 ease-in-out transform hover:scale-[1.01]"
+                            class="w-full flex justify-center py-4 px-4 border border-transparent rounded-lg shadow-md text-xl font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200 ease-in-out transform hover:scale-[1.01]"
                         >
                             ارســـــــال
                         </button>
                     </div>
-                    
         </div>
+    </div>
 
-        <!-- 2. THANK YOU CARD (Hidden by default) -->
-        <div id="thank-you-card" class="hidden w-full max-w-md bg-white p-12 md:p-16 shadow-2xl rounded-xl border border-gray-200 text-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 mx-auto mb-6 text-green-500">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    </svg>
-                    <h2 class="text-4xl font-extrabold text-green-700 mb-2">
-                        شكراً لك!
-                    </h2>
-                <p class="text-gray-600">تم تسجيل دخولك بنجاح إلى الفعالية.</p>
-        </div>
-        
+    <!-- 2. THANK YOU CARD (Hidden by default) -->
+    <div id="thank-you-card" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white p-12 md:p-16 shadow-2xl rounded-xl border border-gray-200 text-center">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 mx-auto mb-6 text-green-500">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+                <h2 class="text-4xl font-extrabold text-green-700 mb-2">
+                    شكراً لك!
+                </h2>
+            <p class="text-gray-600">تم تسجيل دخولك بنجاح إلى الفعالية.</p>
     </div>
 </body>
 </html>

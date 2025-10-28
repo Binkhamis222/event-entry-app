@@ -6,125 +6,102 @@
     <title>تطبيق تسجيل الدخول للفعالية</title>
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+    <!-- Use Inter font -->
     <style>
-        /* تعيين خط "Inter" الافتراضي */
+        /* Ensuring Inter is the base font */
         body { font-family: 'Inter', sans-serif; }
-        /* التنسيق الأساسي للجسم للتوسيط */
-        body {
-            background-color: #f9fafb; /* خلفية رمادية فاتحة للجسم */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            padding: 1rem;
-        }
-        
-        /* التعديل: تطبيق خلفية الصورة على البطاقة الرئيسية بالكامل */
-        #main-checkin-card {
-            padding: 0;
-            overflow: hidden;
-            position: relative; 
-            /* الارتفاع الأدنى: 1000px */
-            min-height: 1000px; 
-        }
+        /* Ensuring the body itself is set to RTL for overall layout fallback */
+        body { direction: rtl; }
     </style>
-    
-    <!-- Load Firebase Realtime Database and Auth Modules -->
+    <!-- Load Firebase Realtime Database Modules -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
-        
-        // --- FIREBASE CONFIGURATION (Explicitly set using user's configuration) ---
-        // استخدام المتغيرات العمومية الموفرة من قبل بيئة Canvas
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        
-        // ** التعديل: استخدام إعدادات Firebase التي قدمتها بشكل مباشر لضمان الاتصال **
-        const firebaseConfig = {
-            // بياناتك الخاصة التي تم إدخالها
-            apiKey: "AIzaSyB1wqr1Rh8f6O_dLEKO0LQAZdXCXvPVbBE",
+        import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+
+        // --- FIREBASE CONFIGURATION ---
+        // NOTE: These credentials are hardcoded for the Realtime Database connection.
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyB1wqr1Rh8f6O_dLEKO0LQAZdXCXvPVbBE", 
             authDomain: "newstartigy.firebaseapp.com",
             databaseURL: "https://newstartigy-default-rtdb.firebaseio.com",
             projectId: "newstartigy",
-            storageBucket: "newstartigy.firebasestorage.app",
+            storageBucket: "newstartigy.appspot.com",
             messagingSenderId: "578357284831",
-            appId: "1:578357284831:web:7ab9395f24c44f89f4be6a",
-            measurementId: "G-TE8KFDZ23Z"
+            appId: "1:578357284831:web:7ab9395f24c44f89f4be6a"
         };
-        // ----------------------------------------------------------------------
+        // The hardcoded log path for all submissions across sessions.
+        const LOG_ROOT = 'GENERAL_ENTRIES_LOG';
+        const SUBMISSIONS_NODE = 'submissions';
+        const FULL_LOG_PATH = LOG_ROOT + '/' + SUBMISSIONS_NODE;
 
-        // المسار العام لتخزين إدخالات الفعالية
-        const COLLECTION_PATH = `GENERAL_ENTRIES_LOG/submissions`;
-
-        // Global services and user state
+        // Global variables for Firebase services and session ID
         let db = null;
-        let auth = null;
-        let currentUserId = 'unknown'; 
-        let isInitialized = false;
+        let sessionID = null;
 
         // Function to display messages (replaces alert())
         function showMessage(message, type = 'info') {
             const messageBox = document.getElementById('message-box');
-            messageBox.textContent = message;
+            // Ensure text-right is always present for RTL layout
             messageBox.className = "p-3 rounded-lg text-sm transition-opacity duration-300 text-right";
-            
+            messageBox.textContent = message;
+            messageBox.style.opacity = '1';
+
             if (type === 'success') {
                 messageBox.classList.add('bg-green-100', 'text-green-800');
             } else if (type === 'error') {
                 messageBox.classList.add('bg-red-100', 'text-red-800');
             } else if (type === 'warning') {
                 messageBox.classList.add('bg-yellow-100', 'text-yellow-800');
-            } else {
-                messageBox.classList.add('bg-gray-100', 'text-gray-800');
+            } else { // info
+                messageBox.classList.add('bg-blue-100', 'text-blue-800');
             }
-            
-            messageBox.style.opacity = '1';
-            
-            if (type === 'success' || type === 'info') {
-                setTimeout(() => {
-                    messageBox.style.opacity = '0';
-                }, 5000);
-            }
+            // Clear message after 5 seconds
+            setTimeout(() => {
+                messageBox.style.opacity = '0';
+            }, 5000);
         }
 
-        // دالة لإعادة إظهار بطاقة تسجيل الدخول الرئيسية
-        window.resetCheckIn = function() {
-            document.getElementById('main-checkin-card').classList.remove('hidden');
-            document.getElementById('thank-you-card').classList.add('hidden');
-            document.getElementById('name-input').value = '';
-            document.getElementById('name-input').focus();
-        };
-        
-        // Function to handle initialization and authentication
-        async function handleInitialization() {
+        // Function to initialize Firebase, get the session ID, and update UI
+        function initializeAppAndSession() {
+            const header = document.getElementById('app-header');
+            // Removed: const sessionDisplay = document.getElementById('session-display');
+
+            // 1. Get the session ID from the URL query parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            sessionID = urlParams.get('session');
+
+            if (!sessionID) {
+                sessionID = 'unspecified_session_entries';
+                // Keeping the warning message for administration/debugging purposes
+                showMessage("تنبيه: مُعرّف الجلسة غير موجود في الرابط. يتم استخدام الافتراضي: " + sessionID, 'warning');
+            } 
+            // Removed the block that displays sessionID to the user.
+            
+            // 2. Initialize Firebase App
             try {
-                // Initialize Firebase App and Services
-                const app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
+                const app = initializeApp(FIREBASE_CONFIG);
                 db = getDatabase(app);
-
-                // Authentication: ALWAYS sign in anonymously as requested.
-                // We deliberately ignore the __initial_auth_token.
-                await signInAnonymously(auth);
-
-                // Set user ID and update state
-                currentUserId = auth.currentUser?.uid || crypto.randomUUID();
-                isInitialized = true;
                 
-                showMessage("تم الاتصال بخادم (Realtime Database) بنجاح كمستخدم مجهول. يمكنك تسجيل الدخول.", 'success');
-                
+                // Initialization SUCCESS: Change header to green and show ready message
+                header.classList.remove('text-indigo-700');
+                header.classList.add('text-green-700');
+                showMessage("التطبيق جاهز لتسجيل الدخول.", 'success');
+
             } catch (error) {
-                console.error("Firebase Initialization/Auth Error:", error);
-                // هذا الخطأ عادة ما يحدث إذا كانت بيانات firebaseConfig خاطئة أو أن خدمة RTDB غير مفعلة في مشروعك.
-                showMessage("فشل التهيئة: تحقق من إعدادات الاتصال.", 'error');
+                console.error("Firebase Initialization Error:", error);
+                
+                // Initialization FAILURE: Change header to red
+                header.classList.remove('text-indigo-700');
+                header.classList.add('text-red-700');
+                showMessage("فشل التهيئة: تحقق من إعدادات Firebase والوحدة للمزيد من التفاصيل.", 'error');
             }
         }
         
-        // --- SUBMIT LOGIC (Uses Realtime Database push/set) ---
-        window.submitEntry = async function() {
-            if (!isInitialized) {
-                showMessage("فشل الإرسال: التطبيق لم يتم تهيئته بعد.", 'error');
+        // --- SUBMIT LOGIC ---
+        // Expose submitEntry to the global scope so onclick can find it
+        window.submitEntry = function() {
+            if (!db) {
+                showMessage("فشل الإرسال: التطبيق لم يتم تهيئته.", 'error');
                 return;
             }
 
@@ -135,117 +112,112 @@
                 showMessage("الرجاء إدخال اسمك قبل الإرسال.", 'warning');
                 return;
             }
-            
-            // Disable button while submitting
-            const submitButton = document.getElementById('submit-button');
-            submitButton.disabled = true;
-            submitButton.classList.add('opacity-50', 'cursor-not-allowed');
 
             const newEntry = {
-                name: guestName,
-                timestamp: new Date().toISOString(),
-                userId: currentUserId // Record the user submitting the entry
+                guestName: guestName,
+                // Log the session ID the entry was submitted under
+                entrySession: sessionID,
+                timestamp: new Date().toISOString()
             };
 
-            try {
-                // استخدام ref و push و set لإضافة بيانات إلى RTDB
-                const dbRef = ref(db, COLLECTION_PATH);
-                const newEntryRef = push(dbRef); // إنشاء مفتاح فريد
-                await set(newEntryRef, newEntry); // إرسال البيانات
-                
+            // Use push() to create a new, unique child node in the specific session path
+            const sessionRef = ref(db, sessionID);
+            // Use the hardcoded full path for the general log
+            const logRef = ref(db, FULL_LOG_PATH);
+
+            // Attempt to push to BOTH the session-specific node and the general log node
+            Promise.all([
+                push(sessionRef, newEntry),
+                push(logRef, newEntry)
+            ])
+            .then(() => {
                 // Submission successful:
+                // 1. Hide the main check-in card
                 document.getElementById('main-checkin-card').classList.add('hidden');
+                
+                // 2. Update and show the Thank You card
+                document.getElementById('thank-you-name').textContent = guestName;
                 document.getElementById('thank-you-card').classList.remove('hidden');
                 
-                showMessage("تم تسجيل دخولك بنجاح. مرحباً بك في الفعالية!", 'success');
-
-            } catch (error) {
+                nameInput.value = ''; // Clear the input field for next use if the user refreshes
+            })
+            .catch((error) => {
                 console.error("Data submission error:", error);
-                // هذا الخطأ عادة ما يكون بسبب قواعد الأمان
-                showMessage("فشل الإرسال: لم نتمكن من تسجيل دخولك. (تحقق من قواعد الأمان في RTDB).", 'error');
-            } finally {
-                // Re-enable button
-                submitButton.disabled = false;
-                submitButton.classList.remove('opacity-50', 'cursor-not-allowed');
-            }
+                // Inform the user about the failure
+                showMessage("فشل الإرسال: خطأ في الشبكة أو القواعد. (من المحتمل أن يكون CSP قد حظر Realtime DB)", 'error');
+                // Re-show the main card if it was hidden
+                document.getElementById('main-checkin-card').classList.remove('hidden');
+                document.getElementById('thank-you-card').classList.add('hidden');
+            });
         };
         // --- END SUBMIT LOGIC ---
 
-        // Assign the initialization function to window.onload
-        window.onload = handleInitialization;
+        // Initialize on window load
+        window.onload = initializeAppAndSession;
     </script>
 </head>
+<body class="bg-gray-50 flex items-center justify-center min-h-screen p-4">
 
-<body>
+    <!-- Outer container to control max width -->
+    <div class="w-full max-w-md">
 
-    <!-- MAIN CHECK-IN CARD (Visible by default) -->
-    <div 
-        id="main-checkin-card" 
-        class="w-full max-w-xl shadow-2xl rounded-xl border border-gray-200 bg-cover bg-center bg-no-repeat"
-        style="background-image: url('https://binkhamis222.github.io/event-entry-app/555.png');"
-    >
-        
-        <!-- العنوان (الهامش العلوي 300px) -->
-        <h1 
-            id="app-header" 
-            class="text-3xl font-extrabold text-center text-white mt-[300px] mb-4 transition-colors duration-300"
-        >
-            تسجيل الدخول للفعالية
-        </h1>
+        <!-- 1. MAIN CHECK-IN CARD (Visible by default) -->
+        <div id="main-checkin-card" class="bg-white p-6 md:p-8 shadow-2xl rounded-xl border border-gray-200">
 
-        <!-- Card Body Content: الآن شفاف بالكامل، والنص أبيض -->
-        <div class="p-8 md:p-10 bg-transparent rounded-b-xl h-full flex flex-col justify-center">
-                    
-                    <!-- Message Box -->
-                    <!-- تم تعديل لون رسائل التحذير والخطأ لتظهر بوضوح فوق الخلفية الداكنة -->
-                    <div id="message-box" class="mb-6 opacity-0 transition-opacity duration-300"></div>
+            <!-- Header -->
+            <h1 id="app-header" class="text-3xl font-extrabold text-center text-indigo-700 mb-8 transition-colors duration-300">
+                تسجيل الدخول للفعالية
+            </h1>
+            <!-- Removed: Session ID display -->
 
-                    <!-- Input Form (تم إضافة هامش علوي سالب لرفعه للأعلى) -->
-                    <div class="space-y-8 -mt-[100px]">
-                        <div>
-                            <!-- جعل النص أبيض لضمان التباين -->
-                            <label for="name-input" class="block text-lg font-medium text-white mb-2">
-                                أدخل اسمك
-                            </label>
-                            <input 
-                                type="text" 
-                                id="name-input" 
-                                placeholder="الاسم الكامل"
-                                class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-lg transition duration-150 text-right text-gray-800"
-                                onkeydown="if(event.key === 'Enter') submitEntry()"
-                            >
-                        </div>
+            
+            <!-- Message Box -->
+            <div id="message-box" class="mb-6 opacity-0 transition-opacity duration-300"></div>
 
-                        <!-- Submit Button -->
-                        <button 
-                            id="submit-button"
-                            onclick="submitEntry()"
-                            class="w-full flex justify-center py-4 px-4 border border-transparent rounded-lg shadow-md text-xl font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200 ease-in-out transform hover:scale-[1.01]"
-                        >
-                            ارســـــــال
-                        </button>
-                    </div>
+            <!-- Input Form -->
+            <div class="space-y-6">
+                <div>
+                    <!-- Label with text-right -->
+                    <label for="name-input" class="block text-lg font-medium text-gray-700 mb-2 text-right">
+                        أدخل اسمك
+                    </label>
+                    <!-- Input with text-right -->
+                    <input 
+                        type="text" 
+                        id="name-input" 
+                        placeholder="الاسم الكامل"
+                        class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-lg transition duration-150 text-right"
+                        onkeydown="if(event.key === 'Enter') submitEntry()"
+                    >
+                </div>
+                <!-- Submit Button -->
+                <button 
+                    id="submit-button"
+                    onclick="submitEntry()"
+                    class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-md text-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200 ease-in-out transform hover:scale-[1.01]"
+                >
+                    إرسال وتسجيل الدخول
+                </button>
+            </div>
+
+            <!-- Removed: Footer text -->
         </div>
-    </div>
 
-    <!-- تم إزالة ATTENDEES LIST CONTAINER (قائمة الحضور) بناءً على طلبك -->
-
-    <!-- 2. THANK YOU CARD (Hidden by default) -->
-    <div id="thank-you-card" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white p-12 md:p-16 shadow-2xl rounded-xl border border-gray-200 text-center">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 mx-auto mb-6 text-green-500">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                </svg>
-                <h2 class="text-4xl font-extrabold text-green-700 mb-2">
-                    شكراً لك!
-                </h2>
-            <p class="text-gray-600 mb-6">تم تسجيل دخولك بنجاح إلى الفعالية.</p>
-            <!-- زر جديد لإعادة تسجيل شخص آخر -->
-            <button
-                onclick="resetCheckIn()"
-                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-md text-base font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200 ease-in-out"
-            >
-                تسجيل دخول شخص آخر
-            </button>
+        <!-- 2. THANK YOU CARD (Hidden by default) -->
+        <div id="thank-you-card" class="hidden mt-8 bg-white p-12 md:p-16 shadow-2xl rounded-xl border border-gray-200 text-center">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 mx-auto mb-6 text-green-500">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+            <h2 class="text-4xl font-extrabold text-green-700 mb-2">
+                شكراً لك!
+            </h2>
+            <p class="text-xl text-gray-700 mb-4">
+                <span id="thank-you-name" class="font-bold text-indigo-600">الضيف</span>، تم تسجيل دخولك بنجاح.
+            </p>
+            <p class="text-gray-500">
+                استمتع بوقتك في الفعالية.
+            </p>
+        </div>
     </div>
 </body>
 </html>

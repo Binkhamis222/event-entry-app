@@ -27,14 +27,13 @@
             messagingSenderId: "578357284831",
             appId: "1:578357284831:web:7ab9395f24c44f89f4be6a"
         };
-        // The hardcoded log path for all submissions across sessions.
-        const LOG_ROOT = 'GENERAL_ENTRIES_LOG';
-        const SUBMISSIONS_NODE = 'submissions';
-        const FULL_LOG_PATH = LOG_ROOT + '/' + SUBMISSIONS_NODE;
+        // تم دمج المسار العام والخاص بالجلسة في مسار واحد ثابت:
+        const SUBMISSIONS_PATH = 'MAIN_EVENT_LOG/submissions';
 
         // Global variables for Firebase services and session ID
         let db = null;
-        let sessionID = null;
+        // تم إلغاء الحاجة إلى متغير sessionID هنا
+        let sessionID = 'main_event_submissions'; // قيمة ثابتة جديدة
 
         // Function to display messages (replaces alert())
         function showMessage(message, type = 'info') {
@@ -59,19 +58,9 @@
             }, 5000);
         }
 
-        // Function to initialize Firebase, get the session ID, and update UI
+        // Function to initialize Firebase
         function initializeAppAndSession() {
             const header = document.getElementById('app-header');
-
-            // 1. Get the session ID from the URL query parameter
-            const urlParams = new URLSearchParams(window.location.search);
-            sessionID = urlParams.get('session');
-
-            if (!sessionID) {
-                sessionID = 'unspecified_session_entries';
-                // تم التعليق على هذا السطر لإخفاء التنبيه من واجهة المستخدم
-                // showMessage("تنبيه: مُعرّف الجلسة غير موجود في الرابط. يتم استخدام الافتراضي: " + sessionID, 'warning');
-            } 
             
             // 2. Initialize Firebase App
             try {
@@ -109,52 +98,38 @@
                 return;
             }
 
-            // --- التعديل: الانتقال إلى صفحة الشكر مباشرةً بعد التحقق من الإدخال ---
-            // هذا التعديل يضمن انتقال الصفحة حتى لو فشل الاتصال بقاعدة البيانات.
-            
-            // SUCCESS: Show message and transition to Thank You page
+            // --- التحويل إلى صفحة الشكر مباشرةً (كما طلب سابقاً) ---
             showMessage("تسجيل دخول ناجح! مرحباً، " + guestName + ". (تم تخطي حفظ البيانات)", 'success');
-            nameInput.value = ''; // Clear the input field
+            nameInput.value = ''; 
             
             document.getElementById('check-in-container').classList.add('hidden');
             document.getElementById('thank-you-section').classList.remove('hidden');
 
-            // ------------------------------------------------------------------------
+            // --------------------------------------------------------
 
             // Store original text for restoration
             const originalButtonText = "ارسال | send"; 
             
             // 2. Disable the button and show loading state
             submitButton.disabled = true;
-            submitButton.textContent = "جاري الإرسال (تخطي الحفظ)..."; // تم تغيير نص التحميل
+            submitButton.textContent = "جاري الإرسال (تخطي الحفظ)..."; 
             submitButton.classList.remove('hover:bg-[#008083]');
             submitButton.classList.add('opacity-75', 'cursor-not-allowed', 'bg-[#33a8aa]');
 
 
             const newEntry = {
                 guestName: guestName,
-                entrySession: sessionID,
+                entrySession: sessionID, // يستخدم القيمة الثابتة 'main_event_submissions'
                 timestamp: new Date().toISOString()
             };
 
-            // Use push() to create a new, unique child node in the specific session path
-            const sessionRef = ref(db, sessionID);
-            // Use the hardcoded full path for the general log
-            const logRef = ref(db, FULL_LOG_PATH);
+            // نستخدم مسار إرسال واحد الآن
+            const logRef = ref(db, SUBMISSIONS_PATH);
 
-            // Use Promise.all to ensure both entries are attempted
-            Promise.all([
-                // لا نعتمد على نتيجة Push لغرض التحويل الآن، لكننا نحاول الحفظ في الخلفية
-                (db ? push(sessionRef, newEntry).catch(() => console.log("Session DB push skipped")) : Promise.resolve()),
-                (db ? push(logRef, newEntry).catch(() => console.log("General DB push skipped")) : Promise.resolve())
-            ])
-            .then(() => {
-                // هذا الجزء لم يعد مسؤولاً عن تغيير الصفحة، ولكنه يعالج حالة النجاح فقط
-            })
+            // نحاول الحفظ في الخلفية دون الاعتماد على نجاحه للتحويل بين الصفحات
+            (db ? push(logRef, newEntry) : Promise.resolve())
             .catch((error) => {
-                // هذا الجزء لم يعد مسؤولاً عن تغيير الصفحة، ولكنه يعالج حالة الفشل فقط
                 console.error("Data submission error (Firebase/CSP):", error);
-                // لا نعرض رسالة خطأ للمستخدم الآن لأننا انتقلنا بالفعل
             })
             .finally(() => {
                 // 3. Re-enable the button regardless of success or failure

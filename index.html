@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Session Data Submission</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f7f7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .card {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease;
+        }
+        .button-primary {
+            transition: background-color 0.2s, transform 0.1s;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app" class="w-full max-w-md p-6 sm:p-8">
+        <div id="main-card" class="card bg-white rounded-xl p-6 transition-all duration-300">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Submit Your Name</h1>
+            <p id="session-display" class="text-sm font-medium text-indigo-600 mb-6"></p>
+
+            <div id="status-message" class="text-center text-sm mb-4 hidden"></div>
+
+            <form id="name-form">
+                <div class="mb-4">
+                    <label for="userName" class="block text-sm font-medium text-gray-700 mb-1">Enter Your Name</label>
+                    <input type="text" id="userName" required placeholder="Type your name here"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
+                           maxlength="50">
+                </div>
+                <button type="submit" id="submit-button" disabled
+                        class="button-primary w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-lg shadow-md disabled:bg-indigo-400">
+                    <span id="button-text">Initializing...</span>
+                </button>
+            </form>
+            
+            <div id="success-modal" class="hidden text-center mt-6 p-4 bg-green-50 border-l-4 border-green-500 text-green-700 rounded-lg">
+                <p class="font-semibold text-lg">Data Submitted Successfully! ✅</p>
+                <p class="text-sm mt-1">Thank you. Your name has been saved.</p>
+            </div>
+
+            <button id="reset-button"
+                class="w-full mt-4 text-xs text-gray-500 hover:text-red-500 p-2 border border-gray-200 rounded-lg">
+                [Testing Only] Reset User (Simulate new device)
+            </button>
+            
+            <div class="mt-6 text-xs text-gray-500 pt-4 border-t border-gray-100">
+                <p>Auth User ID:</p>
+                <code id="user-id-display" class="block mt-1 font-mono text-gray-600 break-all bg-gray-50 p-2 rounded">Initializing...</code>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+
+        // *** YOUR HARDCODED FIREBASE CONFIGURATION ***
+        // This configuration connects the app directly to the 'newstartigy' project.
+        const firebaseConfig = {
+            apiKey: "AIzaSyB1wqr1Rh8f6O_dLEKO0LQAZdXCXvPVbBE",
+            authDomain: "newstartigy.firebaseapp.com",
+            databaseURL: "https://newstartigy-default-rtdb.firebaseio.com",
+            projectId: "newstartigy",
+            storageBucket: "newstartigy.firebasestorage.app",
+            messagingSenderId: "578357284831",
+            appId: "1:578357284831:web:7ab9395f24c44f89f4be6a"
+        };
+        // *** END FIREBASE CONFIGURATION ***
+
+        let db; 
+        let auth;
+        let userId = null;
+        let authReady = false; 
+        let currentSessionId = null;
+
+        const nameForm = document.getElementById('name-form');
+        const userNameInput = document.getElementById('userName');
+        const submitButton = document.getElementById('submit-button');
+        const buttonText = document.getElementById('button-text');
+        const statusMessage = document.getElementById('status-message');
+        const successModal = document.getElementById('success-modal');
+        const sessionIdDisplay = document.getElementById('session-display');
+        const userIdDisplay = document.getElementById('user-id-display');
+        const resetButton = document.getElementById('reset-button');
+        
+        const showStatus = (message, color = 'text-gray-600') => {
+            statusMessage.textContent = message;
+            statusMessage.className = `text-center text-sm mb-4 block ${color}`;
+        };
+
+        const setAppReadyState = (ready) => {
+            submitButton.disabled = !ready;
+            buttonText.textContent = ready ? "Submit Name" : "Initializing...";
+            if (ready) {
+                showStatus("Authentication successful.", "text-green-600");
+            } else {
+                showStatus("Authenticating...", "text-yellow-600");
+            }
+        };
+
+
+        async function initializeAndAuthenticate() {
+            if (!firebaseConfig.apiKey) {
+                showStatus("Error: Firebase configuration is missing.", "text-red-600");
+                return;
+            }
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getDatabase(app); 
+                auth = getAuth(app); // Assign auth globally
+
+                setAppReadyState(false); // Set to initializing state
+                
+                // Promise to wait until authentication is complete
+                const authPromise = new Promise(resolve => {
+                    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+                        if (user) {
+                            userId = user.uid;
+                            userIdDisplay.textContent = userId;
+                            authReady = true;
+                            unsubscribe();
+                            resolve();
+                        } else if (!authReady) {
+                            // Only sign in anonymously if not yet authenticated
+                            await signInAnonymously(auth);
+                        }
+                    });
+                });
+
+                // Start sign-in process
+                await signInAnonymously(auth);
+                
+                // Wait for the auth process to finish and userId to be set
+                await authPromise;
+                
+                initializeAppLogic();
+
+            } catch (error) {
+                console.error("Firebase Initialization or Auth Error:", error);
+                showStatus(`Authentication Failed: ${error.message}. Check network and Firebase rules.`, "text-red-600");
+                submitButton.disabled = true;
+            }
+        }
+
+        function initializeAppLogic() {
+            const urlParams = new URLSearchParams(window.location.search);
+            currentSessionId = urlParams.get('session');
+
+            if (!currentSessionId || currentSessionId.trim() === '') {
+                currentSessionId = 'TEST_SESSION_DEFAULT'; 
+                sessionIdDisplay.textContent = `No session ID found. Using default: ${currentSessionId}`;
+                sessionIdDisplay.classList.remove('text-indigo-600');
+                sessionIdDisplay.classList.add('text-red-500');
+            } else {
+                sessionIdDisplay.textContent = `Session ID: ${currentSessionId}`;
+            }
+
+            // Set button state after userId is confirmed
+            if (userId) {
+                setAppReadyState(true);
+            }
+
+            // Event Listeners
+            nameForm.addEventListener('submit', handleFormSubmit);
+
+            // Logic for the reset button
+            resetButton.addEventListener('click', async () => {
+                setAppReadyState(false);
+                
+                // Sign out the current anonymous user
+                await signOut(auth);
+                
+                // Reload the page to force a new anonymous sign-in (and new UID)
+                window.location.reload(); 
+            });
+        }
+
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+            
+            const userName = userNameInput.value.trim();
+
+            if (!userName) {
+                showStatus("Name cannot be empty.", "text-red-600");
+                return;
+            }
+            // CRITICAL CHECK: Ensure we have a confirmed, authenticated UID
+            if (!db || !userId || !currentSessionId || !authReady) {
+                showStatus("Authentication is not complete. Please wait a moment.", "text-red-600");
+                return;
+            }
+
+            submitButton.disabled = true;
+            buttonText.textContent = "Submitting...";
+            statusMessage.classList.add('hidden');
+            successModal.classList.add('hidden');
+
+            try {
+                // Path structure: sessions/{sessionId}/{userId}
+                const dbPath = `sessions/${currentSessionId}/${userId}`;
+                const dbRef = ref(db, dbPath); 
+
+                const submissionData = {
+                    sessionId: currentSessionId,
+                    name: userName, 
+                    userId: userId,
+                    timestamp: new Date().toISOString()
+                };
+
+                await set(dbRef, submissionData);
+
+                successModal.classList.remove('hidden');
+                nameForm.classList.add('hidden');
+                showStatus(`Data saved for session: ${currentSessionId}`, "text-green-600");
+
+            } catch (error) {
+                console.error("Error writing document to Realtime Database:", error);
+                let errorMessage = error.message.includes("PERMISSION_DENIED") 
+                                 ? "Submission Failed: Check your Firebase Security Rules and Anonymous Auth." 
+                                 : `Submission Failed: ${error.message}`;
+
+                showStatus(errorMessage, "text-red-600");
+                submitButton.disabled = false;
+                buttonText.textContent = "Submit Name";
+            }
+        }
+
+        initializeAndAuthenticate();
+    </script>
+</body>
+</html>

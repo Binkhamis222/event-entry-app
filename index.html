@@ -142,18 +142,17 @@
                 push(logRef, newEntry)
             ])
             .then(() => {
+                // SUCCESS: Show message and transition to Thank You page
                 showMessage("تسجيل دخول ناجح! مرحباً، " + guestName + ".", 'success');
                 nameInput.value = ''; // Clear the input field
                 
-                // Hide the main check-in form container (تم تحديث ID)
                 document.getElementById('check-in-container').classList.add('hidden');
-                
-                // Show the Thank You section (تم تحديث ID)
                 document.getElementById('thank-you-section').classList.remove('hidden');
             })
             .catch((error) => {
+                // FAILURE: Show error message to user and log to console for debugging
                 console.error("Data submission error (Firebase/CSP):", error);
-                // We suppress the user-facing error message as requested, but we re-enable the button.
+                showMessage("فشل الإرسال. يرجى التحقق من الاتصال والمحاولة مرة أخرى.", 'error'); 
             })
             .finally(() => {
                 // 3. Re-enable the button regardless of success or failure

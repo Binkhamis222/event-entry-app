@@ -33,11 +33,12 @@
         /* **تمت الإزالة:** لا حاجة لتعيين z-index الآن */
     </style>
     
-    <!-- Load Firebase Firestore and Auth Modules -->
+    <!-- Load Firebase Realtime Database and Auth Modules -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // تم التغيير: استيراد Realtime Database بدلاً من Firestore
+        import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
         
         // --- FIREBASE CONFIGURATION (Canvas Mandatory) ---
         // استخدام المتغيرات العمومية الموفرة من قبل بيئة Canvas
@@ -45,6 +46,7 @@
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
 
         // المسار العام لتخزين إدخالات الفعالية (مسار Public مطلوب للمشاركة)
+        // هذا المسار سيُستخدم كمرجع في Realtime Database
         const COLLECTION_PATH = `artifacts/${appId}/public/data/event_entries`;
 
         // Global services and user state
@@ -84,7 +86,8 @@
                 // Initialize Firebase App and Services
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
-                db = getFirestore(app);
+                // تم التغيير: استخدام getDatabase لـ RTDB
+                db = getDatabase(app);
 
                 // Authentication using provided token or sign in anonymously
                 const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
@@ -98,7 +101,7 @@
                 currentUserId = auth.currentUser?.uid || crypto.randomUUID();
                 isInitialized = true;
                 
-                showMessage("تم الاتصال بالخادم (Firestore) بنجاح. يمكنك تسجيل الدخول.", 'info');
+                showMessage("تم الاتصال بخادم (Realtime Database) بنجاح. يمكنك تسجيل الدخول.", 'info');
                 
             } catch (error) {
                 console.error("Firebase Initialization/Auth Error:", error);
@@ -106,7 +109,7 @@
             }
         }
         
-        // --- SUBMIT LOGIC (Uses Firestore addDoc) ---
+        // --- SUBMIT LOGIC (Uses Realtime Database push/set) ---
         window.submitEntry = async function() {
             if (!isInitialized) {
                 showMessage("فشل الإرسال: التطبيق لم يتم تهيئته بعد.", 'error');
@@ -133,8 +136,10 @@
             };
 
             try {
-                // Use addDoc to push data to the Firestore collection
-                await addDoc(collection(db, COLLECTION_PATH), newEntry);
+                // تم التغيير: استخدام ref و push و set لإضافة بيانات إلى RTDB
+                const dbRef = ref(db, COLLECTION_PATH);
+                const newEntryRef = push(dbRef); // إنشاء مفتاح فريد
+                await set(newEntryRef, newEntry); // إرسال البيانات
                 
                 // Submission successful:
                 document.getElementById('main-checkin-card').classList.add('hidden');

@@ -28,16 +28,13 @@
             /* الارتفاع الأدنى: 1000px */
             min-height: 1000px; 
         }
-        
-        /* **تمت الإزالة:** إزالة طبقة التظليل السوداء (::before) لجعل البطاقة شفافة بالكامل */
-        /* **تمت الإزالة:** لا حاجة لتعيين z-index الآن */
     </style>
     
     <!-- Load Firebase Realtime Database and Auth Modules -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        // تم التغيير: استيراد Realtime Database بدلاً من Firestore
+        // تم إزالة onValue حيث لم نعد بحاجة لسماع التحديثات في الوقت الفعلي
         import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
         
         // --- FIREBASE CONFIGURATION (Canvas Mandatory) ---
@@ -45,8 +42,7 @@
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
 
-        // المسار العام لتخزين إدخالات الفعالية (مسار Public مطلوب للمشاركة)
-        // تم التحديث ليتوافق مع قواعد الأمان الخاصة بك: GENERAL_ENTRIES_LOG/submissions
+        // المسار العام لتخزين إدخالات الفعالية
         const COLLECTION_PATH = `GENERAL_ENTRIES_LOG/submissions`;
 
         // Global services and user state
@@ -80,13 +76,23 @@
             }
         }
 
+        // دالة لإعادة إظهار بطاقة تسجيل الدخول الرئيسية
+        window.resetCheckIn = function() {
+            document.getElementById('main-checkin-card').classList.remove('hidden');
+            document.getElementById('thank-you-card').classList.add('hidden');
+            document.getElementById('name-input').value = '';
+            document.getElementById('name-input').focus();
+        };
+        
+        // --- REALTIME ATTENDEES LIST - REMOVED ---
+        // تم حذف دالة loadAttendees بناءً على طلبك
+
         // Function to handle initialization and authentication
         async function handleInitialization() {
             try {
                 // Initialize Firebase App and Services
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
-                // تم التغيير: استخدام getDatabase لـ RTDB
                 db = getDatabase(app);
 
                 // Authentication using provided token or sign in anonymously
@@ -101,8 +107,11 @@
                 currentUserId = auth.currentUser?.uid || crypto.randomUUID();
                 isInitialized = true;
                 
-                showMessage("تم الاتصال بخادم (Realtime Database) بنجاح. يمكنك تسجيل الدخول.", 'info');
+                showMessage("تم الاتصال بخادم (Realtime Database) بنجاح. يمكنك تسجيل الدخول.", 'success');
                 
+                // تم حذف استدعاء loadAttendees هنا
+                
+
             } catch (error) {
                 console.error("Firebase Initialization/Auth Error:", error);
                 // إضافة تسجيل الخطأ هنا يساعد في رؤية السبب الجذري إذا لم يكن متعلقًا بالمسار
@@ -137,7 +146,7 @@
             };
 
             try {
-                // تم التغيير: استخدام ref و push و set لإضافة بيانات إلى RTDB
+                // استخدام ref و push و set لإضافة بيانات إلى RTDB
                 const dbRef = ref(db, COLLECTION_PATH);
                 const newEntryRef = push(dbRef); // إنشاء مفتاح فريد
                 await set(newEntryRef, newEntry); // إرسال البيانات
@@ -146,7 +155,6 @@
                 document.getElementById('main-checkin-card').classList.add('hidden');
                 document.getElementById('thank-you-card').classList.remove('hidden');
                 
-                nameInput.value = ''; // Clear the input field for next use
                 showMessage("تم تسجيل دخولك بنجاح. مرحباً بك في الفعالية!", 'success');
 
             } catch (error) {
@@ -217,6 +225,8 @@
         </div>
     </div>
 
+    <!-- تم إزالة ATTENDEES LIST CONTAINER (قائمة الحضور) بناءً على طلبك -->
+
     <!-- 2. THANK YOU CARD (Hidden by default) -->
     <div id="thank-you-card" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white p-12 md:p-16 shadow-2xl rounded-xl border border-gray-200 text-center">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 mx-auto mb-6 text-green-500">
@@ -225,7 +235,14 @@
                 <h2 class="text-4xl font-extrabold text-green-700 mb-2">
                     شكراً لك!
                 </h2>
-            <p class="text-gray-600">تم تسجيل دخولك بنجاح إلى الفعالية.</p>
+            <p class="text-gray-600 mb-6">تم تسجيل دخولك بنجاح إلى الفعالية.</p>
+            <!-- زر جديد لإعادة تسجيل شخص آخر -->
+            <button
+                onclick="resetCheckIn()"
+                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-md text-base font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200 ease-in-out"
+            >
+                تسجيل دخول شخص آخر
+            </button>
     </div>
 </body>
 </html>

@@ -104,28 +104,15 @@
                 auth = getAuth(app);
                 db = getDatabase(app);
 
-                // Authentication: Safely attempt custom token sign-in, fall back to anonymous if token is invalid or missing.
-                const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-                
-                if (token) {
-                    try {
-                        // محاولة تسجيل الدخول باستخدام الرمز المميز المخصص
-                        await signInWithCustomToken(auth, token);
-                    } catch (e) {
-                        // إذا فشلت المحاولة (بسبب عدم تطابق الرمز المميز أو انتهاء صلاحيته)، نعود للتسجيل كمجهول
-                        console.warn("Failed to sign in with custom token. Falling back to anonymous sign-in.", e);
-                        await signInAnonymously(auth);
-                    }
-                } else {
-                    // لا يوجد رمز مميز، سجل الدخول كمجهول مباشرة
-                    await signInAnonymously(auth);
-                }
+                // Authentication: ALWAYS sign in anonymously as requested.
+                // We deliberately ignore the __initial_auth_token.
+                await signInAnonymously(auth);
 
                 // Set user ID and update state
                 currentUserId = auth.currentUser?.uid || crypto.randomUUID();
                 isInitialized = true;
                 
-                showMessage("تم الاتصال بخادم (Realtime Database) بنجاح. يمكنك تسجيل الدخول.", 'success');
+                showMessage("تم الاتصال بخادم (Realtime Database) بنجاح كمستخدم مجهول. يمكنك تسجيل الدخول.", 'success');
                 
             } catch (error) {
                 console.error("Firebase Initialization/Auth Error:", error);

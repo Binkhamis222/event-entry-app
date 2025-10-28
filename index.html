@@ -104,23 +104,29 @@
                 return; // Ignore the click if a submission is already active
             }
 
-            if (!db) {
-                // Keep logging to console for developer review
-                console.error("Submission Failed: Database not initialized.");
-                return;
-            }
-
             if (guestName === "") {
                 showMessage("الرجاء إدخال الاسم الثنائي قبل الإرسال.", 'warning');
                 return;
             }
+
+            // --- التعديل: الانتقال إلى صفحة الشكر مباشرةً بعد التحقق من الإدخال ---
+            // هذا التعديل يضمن انتقال الصفحة حتى لو فشل الاتصال بقاعدة البيانات.
+            
+            // SUCCESS: Show message and transition to Thank You page
+            showMessage("تسجيل دخول ناجح! مرحباً، " + guestName + ". (تم تخطي حفظ البيانات)", 'success');
+            nameInput.value = ''; // Clear the input field
+            
+            document.getElementById('check-in-container').classList.add('hidden');
+            document.getElementById('thank-you-section').classList.remove('hidden');
+
+            // ------------------------------------------------------------------------
 
             // Store original text for restoration
             const originalButtonText = "ارسال | send"; 
             
             // 2. Disable the button and show loading state
             submitButton.disabled = true;
-            submitButton.textContent = "جاري الإرسال...";
+            submitButton.textContent = "جاري الإرسال (تخطي الحفظ)..."; // تم تغيير نص التحميل
             submitButton.classList.remove('hover:bg-[#008083]');
             submitButton.classList.add('opacity-75', 'cursor-not-allowed', 'bg-[#33a8aa]');
 
@@ -138,21 +144,17 @@
 
             // Use Promise.all to ensure both entries are attempted
             Promise.all([
-                push(sessionRef, newEntry),
-                push(logRef, newEntry)
+                // لا نعتمد على نتيجة Push لغرض التحويل الآن، لكننا نحاول الحفظ في الخلفية
+                (db ? push(sessionRef, newEntry).catch(() => console.log("Session DB push skipped")) : Promise.resolve()),
+                (db ? push(logRef, newEntry).catch(() => console.log("General DB push skipped")) : Promise.resolve())
             ])
             .then(() => {
-                // SUCCESS: Show message and transition to Thank You page
-                showMessage("تسجيل دخول ناجح! مرحباً، " + guestName + ".", 'success');
-                nameInput.value = ''; // Clear the input field
-                
-                document.getElementById('check-in-container').classList.add('hidden');
-                document.getElementById('thank-you-section').classList.remove('hidden');
+                // هذا الجزء لم يعد مسؤولاً عن تغيير الصفحة، ولكنه يعالج حالة النجاح فقط
             })
             .catch((error) => {
-                // FAILURE: Show error message to user and log to console for debugging
+                // هذا الجزء لم يعد مسؤولاً عن تغيير الصفحة، ولكنه يعالج حالة الفشل فقط
                 console.error("Data submission error (Firebase/CSP):", error);
-                showMessage("فشل الإرسال. يرجى التحقق من الاتصال والمحاولة مرة أخرى.", 'error'); 
+                // لا نعرض رسالة خطأ للمستخدم الآن لأننا انتقلنا بالفعل
             })
             .finally(() => {
                 // 3. Re-enable the button regardless of success or failure

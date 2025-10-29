@@ -6,10 +6,13 @@
     <title>تطبيق تسجيل الدخول للفعالية</title>
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Use Inter font -->
+    <!-- Use Tahoma font for all text -->
     <style>
-        /* Ensuring Inter is the base font */
-        body { font-family: 'Inter', sans-serif; direction: rtl; }
+        /* Ensuring Tahoma is the base font for better visibility and consistency in Arabic/English */
+        body { 
+            font-family: 'Tahoma', 'Inter', sans-serif; 
+            direction: rtl; 
+        }
     </style>
     <!-- Load Firebase Realtime Database Modules -->
     <script type="module">
@@ -164,7 +167,8 @@
              bg-gray-800 bg-cover bg-center bg-no-repeat bg-[url('https://binkhamis222.github.io/event-entry-app/555.png')]"> 
     
     <!-- حاوية لتقييد عرض المحتوى وجعله يتوسط الشاشة -->
-    <div class="w-full max-w-md p-6 md:p-8 rounded-xl mt-[350px]"> <!-- تم تعديل الهامش العلوي من mt-[400px] إلى mt-[350px] لرفع العناصر 50 بكسل -->
+    <!-- تم تقليل الهامش العلوي من mt-[280px] إلى mt-[50px] لرفع جميع المحتويات بشكل كبير -->
+    <div class="w-full max-w-md p-6 md:p-8 rounded-xl mt-[50px]"> 
 
         <!-- 1. MAIN CHECK-IN CONTAINER (Visible by default) -->
         <div id="check-in-container">
@@ -178,7 +182,19 @@
 
             <!-- Input Form -->
             <div class="space-y-6"> 
-                <div class="mb-[150px]"> <!-- هذا الهامش يفصل حقل الإدخال عن زر الإرسال -->
+                
+                <!-- العبارة العربية المصغرة (تم حذف font-bold) -->
+                <p class="text-white text-center text-xl md:text-2xl tracking-wide mb-1" style="text-shadow: 2px 2px 4px #000000;">
+                    شارك معنا في تدشين الخطة الاستراتيجية
+                </p>
+                <!-- العبارة الإنجليزية الجديدة تحتها مباشرة (تم حذف font-bold) -->
+                <p class="text-white text-center text-xl md:text-2xl tracking-wide mb-4" style="text-shadow: 2px 2px 4px #000000;">
+                    Participate with us in launching the strategic plan
+                </p>
+                <!-- نهاية العبارات -->
+                
+                <!-- تم تقليل الهامش السفلي من mb-[150px] إلى mb-[100px] لتقليل المسافة بين حقل الإدخال والزر -->
+                <div class="mb-[100px]"> 
                     <!-- Label for Tow-part-Name -->
                     <label for="name-input" class="block text-lg font-medium text-white mb-2 flex justify-between items-center text-right">
                         <span>الاسم الثنائي</span>

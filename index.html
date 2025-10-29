@@ -162,11 +162,11 @@
         window.onload = initializeAppAndSession;
     </script>
 </head>
-<!-- تم تغيير تنسيق الـ body لإلغاء التوسيط الرأسي واستخدام حشو علوي يدوي (pt-16) -->
+<!-- **تم إلغاء التوسيط الرأسي (items-center) وإضافة حشو علوي يدوي (pt-16) لتثبيت المحتوى في الأعلى** -->
 <body class="flex justify-center min-h-screen pt-16
              bg-gray-800 bg-cover bg-center bg-no-repeat bg-[url('https://binkhamis222.github.io/event-entry-app/555.png')]"> 
     
-    <!-- حاوية لتقييد عرض المحتوى وجعله يتوسط الشاشة -->
+    <!-- حاوية لتقييد عرض المحتوى وجعله يتوسط الشاشة أفقياً -->
     <div class="w-full max-w-md p-6 md:p-8 rounded-xl mt-0"> 
 
         <!-- 1. MAIN CHECK-IN CONTAINER (Visible by default) -->
@@ -182,18 +182,18 @@
             <!-- Input Form -->
             <div class="space-y-6"> 
                 
-                <!-- العبارة العربية المصغرة (تم حذف الهامش السالب mt-[-150px]) -->
+                <!-- العبارة العربية المصغرة (ثابتة في مكانها) -->
                 <p class="text-white text-center text-xl md:text-2xl tracking-wide mb-1" style="text-shadow: 2px 2px 4px #000000;">
                     شارك معنا في تدشين الخطة الاستراتيجية
                 </p>
-                <!-- العبارة الإنجليزية الجديدة تحتها مباشرة (تم حذف font-bold) -->
-                <!-- الهامش السفلي mb-[150px] ما زال موجوداً للفصل بين العبارات وحقل الإدخال -->
+                <!-- العبارة الإنجليزية الجديدة -->
+                <!-- الهامش السفلي mb-[150px] يدفع النموذج الذي يليها إلى الأسفل بمقدار 150 بكسل -->
                 <p class="text-white text-center text-xl md:text-2xl tracking-wide mb-[150px]" style="text-shadow: 2px 2px 4px #000000;">
                     Participate with us in launching the strategic plan
                 </p>
                 <!-- نهاية العبارات -->
                 
-                <!-- تم إلغاء الهامش العلوي mt-[150px] هنا لأنه لم يعد ضرورياً بعد إلغاء الهامش السالب من العبارة -->
+                <!-- حاوية النموذج (تبدأ الآن بعد مسافة 150 بكسل من العبارة الإنجليزية) -->
                 <div> 
                     <!-- Label for Tow-part-Name -->
                     <!-- الهامش السفلي للـ Label هو mb-6 (مسافة بين الـ Label وحقل الإدخال) -->

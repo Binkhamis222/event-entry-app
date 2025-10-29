@@ -188,13 +188,14 @@
                     شارك معنا في تدشين الخطة الاستراتيجية
                 </p>
                 <!-- العبارة الإنجليزية الجديدة تحتها مباشرة (تم حذف font-bold) -->
-                <p class="text-white text-center text-xl md:text-2xl tracking-wide mb-4" style="text-shadow: 2px 2px 4px #000000;">
+                <!-- تم تغيير الهامش السفلي من mb-4 إلى mb-[100px] لزيادة المسافة -->
+                <p class="text-white text-center text-xl md:text-2xl tracking-wide mb-[100px]" style="text-shadow: 2px 2px 4px #000000;">
                     Participate with us in launching the strategic plan
                 </p>
                 <!-- نهاية العبارات -->
                 
-                <!-- تم تقليل الهامش السفلي من mb-[150px] إلى mb-[100px] لتقليل المسافة بين حقل الإدخال والزر -->
-                <div class="mb-[100px]"> 
+                <!-- تم حذف حاوية div التي كانت تحوي الهامش السفلي الكبير (mb-[100px]) حيث تم نقل الهامش إلى العبارة العلوية -->
+                <div> 
                     <!-- Label for Tow-part-Name -->
                     <label for="name-input" class="block text-lg font-medium text-white mb-2 flex justify-between items-center text-right">
                         <span>الاسم الثنائي</span>
@@ -217,7 +218,7 @@
                     onclick="submitEntry()"
                     class="w-full flex justify-center py-4 px-4 border border-transparent rounded-full shadow-lg text-lg font-bold text-white 
                                bg-[#00979a] hover:bg-[#008083] focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-[#00979a] 
-                               transition duration-200 ease-in-out transform hover:scale-[1.01]" 
+                               transition duration-200 ease-in-out transform hover:scale-[1.01] mt-6" 
                 >
                     ارسال | send 
                 </button>

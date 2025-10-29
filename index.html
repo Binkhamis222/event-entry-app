@@ -183,19 +183,19 @@
             <!-- Input Form -->
             <div class="space-y-6"> 
                 
-                <!-- العبارة العربية المصغرة (تم إضافة الهامش السالب لرفع العبارتين للأعلى بمقدار 50px) -->
-                <p class="text-white text-center text-xl md:text-2xl tracking-wide mb-1 mt-[-50px]" style="text-shadow: 2px 2px 4px #000000;">
+                <!-- العبارة العربية المصغرة (تم حذف الهامش السالب mt-[-50px]) -->
+                <p class="text-white text-center text-xl md:text-2xl tracking-wide mb-1" style="text-shadow: 2px 2px 4px #000000;">
                     شارك معنا في تدشين الخطة الاستراتيجية
                 </p>
                 <!-- العبارة الإنجليزية الجديدة تحتها مباشرة (تم حذف font-bold) -->
-                <!-- الهامش السفلي لا يزال mb-[150px] -->
+                <!-- الهامش السفلي mb-[150px] ما زال موجوداً للفصل بين العبارات وحقل الإدخال -->
                 <p class="text-white text-center text-xl md:text-2xl tracking-wide mb-[150px]" style="text-shadow: 2px 2px 4px #000000;">
                     Participate with us in launching the strategic plan
                 </p>
                 <!-- نهاية العبارات -->
                 
-                <!-- تم حذف حاوية div التي كانت تحوي الهامش السفلي الكبير (mb-[100px]) حيث تم نقل الهامش إلى العبارة العلوية -->
-                <div> 
+                <!-- تم إضافة الهامش العلوي mt-[150px] لتحريك النموذج والزر إلى الأسفل بمقدار 150 بكسل -->
+                <div class="mt-[150px]"> 
                     <!-- Label for Tow-part-Name -->
                     <!-- الهامش السفلي للـ Label هو mb-6 (مسافة بين الـ Label وحقل الإدخال) -->
                     <label for="name-input" class="block text-lg font-medium text-white mb-6 flex justify-between items-center text-right">

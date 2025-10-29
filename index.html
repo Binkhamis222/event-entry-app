@@ -167,7 +167,7 @@
              bg-gray-800 bg-cover bg-center bg-no-repeat bg-[url('https://binkhamis222.github.io/event-entry-app/555.png')]"> 
     
     <!-- حاوية لتقييد عرض المحتوى وجعله يتوسط الشاشة -->
-    <!-- تم تغيير الهامش العلوي من mt-[50px] إلى mt-[0px] لرفع المحتوى بمقدار 50 بكسل إضافية -->
+    <!-- الهامش العلوي mt-0 لضمان توسط الحاوية الكلية في الصفحة -->
     <div class="w-full max-w-md p-6 md:p-8 rounded-xl mt-0"> 
 
         <!-- 1. MAIN CHECK-IN CONTAINER (Visible by default) -->
@@ -183,8 +183,8 @@
             <!-- Input Form -->
             <div class="space-y-6"> 
                 
-                <!-- العبارة العربية المصغرة (تم حذف font-bold) -->
-                <p class="text-white text-center text-xl md:text-2xl tracking-wide mb-1" style="text-shadow: 2px 2px 4px #000000;">
+                <!-- العبارة العربية المصغرة (تم إضافة الهامش السالب لرفع العبارتين للأعلى بمقدار 50px) -->
+                <p class="text-white text-center text-xl md:text-2xl tracking-wide mb-1 mt-[-50px]" style="text-shadow: 2px 2px 4px #000000;">
                     شارك معنا في تدشين الخطة الاستراتيجية
                 </p>
                 <!-- العبارة الإنجليزية الجديدة تحتها مباشرة (تم حذف font-bold) -->

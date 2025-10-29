@@ -187,7 +187,7 @@
                     شارك معنا في تدشين الخطة الاستراتيجية
                 </p>
                 <!-- العبارة الإنجليزية الجديدة -->
-                <!-- **تعديل: تم تغيير mb-[150px] إلى mb-40 لاستخدام كلاس قياسي لـ 160 بكسل وضمان التوافق** -->
+                <!-- تعديل: استخدام mb-40 لضمان مسافة 160 بكسل بين العبارة ونموذج الإدخال -->
                 <p class="text-white text-center text-xl md:text-2xl tracking-wide mb-40" style="text-shadow: 2px 2px 4px #000000;">
                     Participate with us in launching the strategic plan
                 </p>
@@ -227,17 +227,21 @@
 
         <!-- 2. THANK YOU SECTION (Hidden by default) -->
         <div id="thank-you-section" 
-            class="hidden text-center p-12 md:p-16"> <!-- أبقيت على الحشو لرسالة الشكر لتبدو جيدة -->
+            class="hidden text-center p-12 md:p-16"> 
             
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-20 h-20 mx-auto mb-6 text-green-400">
+            <!-- تم التأكد من أن النص على سطر واحد وتم الإبقاء على الهامش السفلي الكبير -->
+            <p class="text-3xl font-extrabold text-white mb-32">
+                نحملها امانة و نوصلها رسالة
+            </p>
+            
+            <!-- تم تقليل الهامش السفلي لـ SVG ليظهر أقرب لعنوان الشكر -->
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-20 h-20 mx-auto mb-4 text-green-400">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
             </svg>
+
             <h2 class="text-5xl font-extrabold text-white mb-4">
                 شكراً لك!
             </h2>
-            <p class="text-lg text-gray-300">
-                <!-- تم حذف النص بناءً على طلبك: "تم تسجيل دخولك بنجاح. نتمنى لك فعالية ممتعة." -->
-            </p>
         </div>
     </div>
 </body>

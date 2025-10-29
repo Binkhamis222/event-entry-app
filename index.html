@@ -30,9 +30,8 @@
         // تم دمج المسار العام والخاص بالجلسة في مسار واحد ثابت:
         const SUBMISSIONS_PATH = 'MAIN_EVENT_LOG/submissions';
 
-        // Global variables for Firebase services and session ID
+        // Global variables for Firebase services and session ID (no longer used in entry, kept for legacy)
         let db = null;
-        // تم إلغاء الحاجة إلى متغير sessionID هنا
         let sessionID = 'main_event_submissions'; // قيمة ثابتة جديدة
 
         // Function to display messages (replaces alert())
@@ -97,39 +96,54 @@
                 showMessage("الرجاء إدخال الاسم الثنائي قبل الإرسال.", 'warning');
                 return;
             }
-
-            // --- التحويل إلى صفحة الشكر مباشرةً (كما طلب سابقاً) ---
-            showMessage("تسجيل دخول ناجح! مرحباً، " + guestName + ". (تم تخطي حفظ البيانات)", 'success');
-            nameInput.value = ''; 
             
-            document.getElementById('check-in-container').classList.add('hidden');
-            document.getElementById('thank-you-section').classList.remove('hidden');
-
-            // --------------------------------------------------------
-
             // Store original text for restoration
             const originalButtonText = "ارسال | send"; 
             
             // 2. Disable the button and show loading state
             submitButton.disabled = true;
-            submitButton.textContent = "جاري الإرسال (تخطي الحفظ)..."; 
+            submitButton.textContent = "جاري الإرسال..."; 
             submitButton.classList.remove('hover:bg-[#008083]');
             submitButton.classList.add('opacity-75', 'cursor-not-allowed', 'bg-[#33a8aa]');
 
 
             const newEntry = {
-                guestName: guestName,
-                entrySession: sessionID, // يستخدم القيمة الثابتة 'main_event_submissions'
+                // تم تغيير المفتاح من 'guestName' إلى 'name'
+                name: guestName,
+                // تم حذف حقل entrySession بالكامل
                 timestamp: new Date().toISOString()
             };
 
             // نستخدم مسار إرسال واحد الآن
             const logRef = ref(db, SUBMISSIONS_PATH);
-
-            // نحاول الحفظ في الخلفية دون الاعتماد على نجاحه للتحويل بين الصفحات
-            (db ? push(logRef, newEntry) : Promise.resolve())
+            
+            // شرط لضمان أن اتصال Firebase متاح
+            if (!db) {
+                console.error("Firebase is not initialized. Cannot submit data.");
+                showMessage("فشل الإرسال. نظام قاعدة البيانات غير جاهز.", 'error');
+                
+                // إعادة تفعيل الزر في حالة الفشل
+                submitButton.disabled = false;
+                submitButton.textContent = originalButtonText;
+                submitButton.classList.remove('opacity-75', 'cursor-not-allowed', 'bg-[#33a8aa]');
+                submitButton.classList.add('hover:bg-[#008083]');
+                return;
+            }
+            
+            // --- محاولة الحفظ والانتظار للنجاح قبل التحويل ---
+            push(logRef, newEntry)
+            .then(() => {
+                // SUCCESS: Show success message and transition to Thank You page
+                showMessage("تم تسجيل دخولك بنجاح. مرحباً، " + guestName + ".", 'success');
+                nameInput.value = ''; 
+                
+                document.getElementById('check-in-container').classList.add('hidden');
+                document.getElementById('thank-you-section').classList.remove('hidden');
+            })
             .catch((error) => {
+                // FAILURE: Show error message to user and log to console for debugging
                 console.error("Data submission error (Firebase/CSP):", error);
+                showMessage("فشل الإرسال. يرجى التحقق من اتصال الإنترنت وقواعد أمان Firebase.", 'error'); 
             })
             .finally(() => {
                 // 3. Re-enable the button regardless of success or failure
@@ -145,9 +159,9 @@
         window.onload = initializeAppAndSession;
     </script>
 </head>
-<!-- تم تغيير bg-cover إلى bg-contain لجعل الصورة تظهر كاملة (تصغيرها) داخل مساحة العرض -->
+<!-- تم تغيير رابط صورة الخلفية من 666.png إلى 555.png كما طلب -->
 <body class="flex items-center justify-center min-h-screen 
-             bg-gray-800 bg-contain bg-center bg-no-repeat bg-[url('https://binkhamis222.github.io/event-entry-app/555.png')]"> 
+             bg-gray-800 bg-cover bg-center bg-no-repeat bg-[url('https://binkhamis222.github.io/event-entry-app/555.png')]"> 
     
     <!-- حاوية لتقييد عرض المحتوى وجعله يتوسط الشاشة -->
     <div class="w-full max-w-md p-6 md:p-8 rounded-xl mt-[350px]"> <!-- تم تعديل الهامش العلوي من mt-[400px] إلى mt-[350px] لرفع العناصر 50 بكسل -->
